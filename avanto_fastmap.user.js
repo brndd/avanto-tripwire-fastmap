@@ -380,7 +380,7 @@ For example: <span style="font-family: monospace;">H5A ABC EC H296 (sig)</span><
 <b>Type:</b><br>
 &nbsp;&nbsp;- K162, H296, B274...<br>
 <b>Comment (opt.):</b><br>
-&nbsp;&nbsp;- Any text in parenthesis. Added to connection name after other info.
+&nbsp;&nbsp;- Any text in parenthesis (like this). Added to connection name after other info.
 `;
 
 // Create the toggle button

@@ -6,7 +6,7 @@
 // @downloadURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js
 // @updateURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js
 // @grant       none
-// @version     0.2
+// @version     0.2.1
 // @author      burneddi
 // @description Adds a quick input box for adding wormholes to Tripwire using Avanto bookmark syntax.
 // ==/UserScript==
@@ -380,7 +380,7 @@ For example: <span style="font-family: monospace;">H5A ABC EC H296 (sig)</span><
 <b>Type:</b><br>
 &nbsp;&nbsp;- K162, H296, B274...<br>
 <b>Comment (opt.):</b><br>
-&nbsp;&nbsp;- Any text in parenthesis. Added to connection name after other info.
+&nbsp;&nbsp;- Any text in parenthesis (like this). Added to connection name after other info.
 `;
 
 // Create the toggle button
