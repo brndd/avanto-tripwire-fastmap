@@ -5,6 +5,7 @@
 
   "scripts": {
     "generate-parser": "npx peggy --format globals -e peggy src/avanto.pegjs -o build/avanto_parser.js",
-    "build": "npm run generate-parser && cat src/avanto_fastmap.js build/avanto_parser.js > avanto_fastmap.user.js"
+    "generate-meta": "sed -n '/==UserScript==/,/==\\/UserScript==/p' src/avanto_fastmap.js > avanto_fastmap.meta.js",
+    "build": "npm run generate-parser && cat src/avanto_fastmap.js build/avanto_parser.js > avanto_fastmap.user.js && npm run generate-meta"
   }
 }
