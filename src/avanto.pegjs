@@ -5,14 +5,16 @@
 }
 
 start
-  = hole:hole _ comment:comment {return hole.concat(comment);}
-  / hole
+  = hole:hole _? comment:comment? {return hole.concat(comment);}
 
-hole "hole definition"
+hole
   = first:first _ sig:sig _ third:third _ type:type {return [first, sig, third, type];}
   / first:first _ sig:sig _ type:type {return [first, sig, null, type];}
 
-_ = " "+
+//this seemingly redundant name makes errors prettier
+//by not expecting more than the minimum necessary whitespace
+_ "\" \""
+  = " "+
 
 /*
 FIRST PART: [chain][class][depth], e.g. A3C, K13B
@@ -33,17 +35,17 @@ class "class identifier"
 //Make sure these are longest first
 unambiguousIdent
   = "12" / "13" / "14" / "15" / "16" / "17" / "18"
-  / "1" / "2" / "3" / "4" / "5" / "6" / "H"i / "L"i / "N"i
+  / "1" / "2" / "3" / "4" / "5" / "6" / "H"i / "L"i / "N"i / "?"
 
 ambiguousIdent
   = theraIdent
   / trigIdent
 
 theraIdent
-  = "Thera"i / "Th"i
+  = "Thera"i / "Th"i {return "Th";}
 
 trigIdent
-  = "Trig"i / "Tr"i
+  = "Trig"i / "Tr"i {return "Tr";}
 
 //Depth is usually a single letter, but this syntax extends
 //to extra-long chains by allowing arbitrarily many letters
