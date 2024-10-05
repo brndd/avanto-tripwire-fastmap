@@ -4,6 +4,15 @@ This userscript adds a simple text input box to Avanto Tripwire
 to facilitate quickly adding new wormhole connections without
 using the mouse.
 
+# Usage
+
+Install the userscript. The quick input box can be opened with the shortcut Alt-N.
+The shortcut currently cannot be changed.
+
+The box looks like this with the syntax help open. The syntax view is hidden by default though.
+
+![screenshot](screenshot.png)
+
 # Building
 
 Run `npm run build`. The userscript will be generated into the root of the repo as avanto_fastmap.user.js.
