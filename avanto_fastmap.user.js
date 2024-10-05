@@ -6,7 +6,7 @@
 // @downloadURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js
 // @updateURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.meta.js
 // @grant       none
-// @version     0.2.2
+// @version     0.2.3
 // @author      burneddi
 // @description Adds a quick input box for adding wormholes to Tripwire using Avanto bookmark syntax.
 // ==/UserScript==
@@ -230,7 +230,7 @@ fastmap.addWormhole = function (parsedWh) {
 
     //Reconstruct name
     let thirdPart = `${parsedWh.isFrig ? "F" : ""}${parsedWh.remainingMass == "critical" ? "C" : parsedWh.remainingMass == "destab" ? "H" : ""}${parsedWh.remainingLife == "critical" ? "E" : ""}`;
-    let name = `${parsedWh.chain}${TWToShortClass[targetClass]}${parsedWh.depth} ${parsedWh.sig}${thirdPart != "" ? ` ${thirdPart}` : ""}${parsedWh.type}${parsedWh.comment != null ? ` ${parsedWh.comment}` : ""}`;
+    let name = `${parsedWh.chain}${TWToShortClass[targetClass]}${parsedWh.depth} ${parsedWh.sig}${thirdPart != "" ? ` ${thirdPart}` : ""}${parsedWh.comment != null ? ` ${parsedWh.comment}` : ""}`;
     //console.log(`Reconstructed name: ${name}`);
     //console.log(`This is a wormhole in the ${wh.chain} chain leading to ${wh.class} at depth ${wh.depth} with sig ID ${fullSig}. The other side's WH type is ${otherSide}. The max life is ${maxLife} seconds.`);
 
