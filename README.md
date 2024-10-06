@@ -9,6 +9,7 @@ using the mouse.
 1. Install [Violentmonkey](https://violentmonkey.github.io/) or Tampermonkey or some other userscript manager.
 2. Install the userscript from [this link](https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js).
 3. Refresh Tripwire.
+4. Press **Alt-S** (**Ctrl-Cmd-S**) to open the input box.
 
 # Usage
 
