@@ -17,7 +17,7 @@ Install the userscript. The quick input box can be opened with the shortcut `Alt
 
 The input box accepts extended Avanto bookmark syntax and always creates the connections in the *currently active system*. The main differences to the common lazy in-game bookmark are:
 
-- Wormhole life/mass/size (E=EOL, C=Crit, D/H=Half-mass, F/S=frigate hole) must be included.
+- Wormhole life/mass/size (E=EOL, C=Crit, D/H=Half-mass, F/S=frigate hole) must be included. The order of these does not matter as long as they're in the 3rd block.
 - The wormhole type (K162, H296, B274, etc.) must be appended to the input.
 - Pound signs (#) and other special characters used for sorting the in-game bookmarks list should not be included.
 - An optional comment in parenthesis, such as (sig) or (DO NOT WARP), can be added to the end. This will be included in the name of the wormhole connection created.
