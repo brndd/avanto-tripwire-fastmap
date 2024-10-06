@@ -31,7 +31,7 @@ An example input is: `K5A ABC ECF K162 (bubbled)`. Assuming the currently active
 - Sig type on this side: K162
 - Sig type on other side: C008 (frig holes into C5 are always this type)
 
-Had we instead input `K5A ABC EC K162`, the sig type on the other would be H296, because non-frigate C5>C5 connections are always this type. If we were in a C3 instead, it would be M267.
+Had we instead input `K5A ABC EC K162`, the sig type on the other side would be H296, because non-frigate C5>C5 connections are always this type. If we were in a C3 instead, it would be M267, the type for C5>C3 connections.
 
 The box looks like this with the syntax help open. The syntax view is hidden by default though.
 
