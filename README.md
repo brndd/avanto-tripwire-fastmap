@@ -9,13 +9,13 @@ using the mouse.
 1. Install [Violentmonkey](https://violentmonkey.github.io/) or Tampermonkey or some other userscript manager.
 2. Install the userscript from [this link](https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js).
 3. Refresh Tripwire.
-4. Press **Alt-S** (**Ctrl-Cmd-S**) to open the input box.
+4. Press `Alt-S` (`Ctrl-Cmd-S`) to open the input box.
 
 # Usage
 
-Install the userscript. The quick input box can be opened with the shortcut **Alt-S** (**Ctrl-Cmd-S** on Mac) (the S stands for "sig"). The shortcut currently cannot be changed.
+Install the userscript. The quick input box can be opened with the shortcut `Alt-S` (`Ctrl-Cmd-S` on Mac) (the S stands for "sig"). The shortcut currently cannot be changed.
 
-The input box accepts extended Avanto bookmark syntax and always creates the connections in the **currently active system**. The main differences to the common lazy in-game bookmark are:
+The input box accepts extended Avanto bookmark syntax and always creates the connections in the *currently active system*. The main differences to the common lazy in-game bookmark are:
 
 - Wormhole life/mass/size (E=EOL, C=Crit, D/H=Half-mass, F/S=frigate hole) must be included.
 - The wormhole type (K162, H296, B274, etc.) must be appended to the input.
