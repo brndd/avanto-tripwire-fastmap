@@ -6,7 +6,7 @@
 // @downloadURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js
 // @updateURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.meta.js
 // @grant       none
-// @version     0.2.4
+// @version     0.2.5
 // @author      burneddi
 // @description Adds a quick input box for adding wormholes to Tripwire using Avanto bookmark syntax.
 // ==/UserScript==
@@ -207,6 +207,9 @@ fastmap.addWormhole = function (parsedWh) {
 
     //Figure out the full signature
     let sigs = Object.values(tripwire.signatures.currentSystem);
+    if (sigs.length == 0) {
+        throw new Error("No signatures in system (paste your sig list first).");
+    }
     let matchedSigs = sigs.filter((s) => s.signatureID.slice(0, 3).toUpperCase() === parsedWh.sig);
     //TODO: disambiguate the rare edge case of multiple matches, error out if sig not found in system(?)
     let sigObj = {};
@@ -216,10 +219,14 @@ fastmap.addWormhole = function (parsedWh) {
         fullSig = sigObj.signatureID;
     }
     else {
-        throw new Error("No matching sig in system (paste your sig list first).");
+        throw new Error("No matching sig in system.");
     }
 
-    let maxLife = appData.wormholes[(parsedWh.type == "K162" ? otherSide : parsedWh.type)].life.substring(0, 2) * 60 * 60;
+    let maxLife = 24 * 60 * 60;
+    let holedata = appData.wormholes[(parsedWh.type == "K162" ? otherSide : parsedWh.type)];
+    if (holedata != undefined) {
+        maxLife = holedata.life.substring(0, 2) * 60 * 60;
+    }
     
     //More Tripwire idiosyncracies: this function only works with system names and genericSystemTypes
     let tar = targetClass;
@@ -265,6 +272,10 @@ fastmap.addWormhole = function (parsedWh) {
         parent = "secondary";
         type = otherSide;
     }
+    else if (targetClass == "Unknown" && otherSide == "????") {
+        parent = "secondary";
+        type = otherSide;
+    }
     else {
         //TODO: fail more gracefully
         throw new Error("undefined WH type");
@@ -293,6 +304,10 @@ fastmap.addWormhole = function (parsedWh) {
             wormhole.type = parsedWh.type;
         }
         else if (otherSide.length > 0 && appData.wormholes[otherSide] != undefined && otherSide != "K162") {
+            wormhole.parent = existingWh.initialID == sigObj.id ? "secondary" : "initial";
+            wormhole.type = otherSide;
+        }
+        else if (targetClass == "Unknown" && otherSide == "????") {
             wormhole.parent = existingWh.initialID == sigObj.id ? "secondary" : "initial";
             wormhole.type = otherSide;
         }
@@ -371,6 +386,7 @@ For example: <span style="font-family: monospace;">H5A ABC EC H296 (sig)</span><
 &nbsp;&nbsp;- Any single letter.<br>
 <b>Class:</b><br>
 &nbsp;&nbsp;- One of: H / L / N / 1-6 / 13 / Tr, Trig / Th, Thera.<br>
+&nbsp;&nbsp;- You can use ? for unknown class and the mapper will try to infer it from WH type.<br>
 <b>Depth:</b><br>
 &nbsp;&nbsp;- A-Z (beyond 26: AA, AB, ..., AZ, BA, ...).<br>
 <b>Sig:</b><br>
@@ -447,6 +463,11 @@ function displayInputBox() {
     // Clear previous content and error messages
     inputBox.value = '';
     errorBox.style.display = 'none';
+
+    if (Object.values(tripwire.signatures.currentSystem).length == 0) {
+        errorBox.textContent = "No signatures in system (paste your sig list first).";
+        errorBox.style.display = 'block';
+    }
 
     // Focus on the input box
     inputBox.focus();
