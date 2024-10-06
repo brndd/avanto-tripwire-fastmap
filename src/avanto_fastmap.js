@@ -6,7 +6,7 @@
 // @downloadURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js
 // @updateURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.meta.js
 // @grant       none
-// @version     0.2.5
+// @version     0.2.6
 // @author      burneddi
 // @description Adds a quick input box for adding wormholes to Tripwire using Avanto bookmark syntax.
 // ==/UserScript==
@@ -71,9 +71,14 @@ const IDToSystemName = {
     "30002086": "Turnur"
 }
 
-VM.shortcut.register('a-n', () => {
-    displayInputBox();
+VM.shortcut.register('a-s', () => {
+  displayInputBox();
 });
+
+VM.shortcut.register('ctrl-cmd-s', () => {
+  displayInputBox();
+})
+
 
 let fastmap = window.fastmap = {};
 

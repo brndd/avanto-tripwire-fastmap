@@ -12,8 +12,7 @@ using the mouse.
 
 # Usage
 
-Install the userscript. The quick input box can be opened with the shortcut Alt-N.
-The shortcut currently cannot be changed.
+Install the userscript. The quick input box can be opened with the shortcut **Alt-S** (**Ctrl-Cmd-S** on Mac) (the S stands for "sig"). The shortcut currently cannot be changed.
 
 The box looks like this with the syntax help open. The syntax view is hidden by default though.
 
