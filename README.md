@@ -13,7 +13,9 @@ using the mouse.
 
 # Usage
 
-Install the userscript. The quick input box can be opened with the shortcut `Alt-S` (`Ctrl-Cmd-S` on Mac) (the S stands for "sig"). The shortcut currently cannot be changed.
+The quick input box can be opened with the shortcut `Alt-S` (`Ctrl-Cmd-S` on Mac) (the S stands for "sig"). The shortcut currently cannot be changed.
+
+If you prefer, you can also paste the wormhole string into Tripwire like you would paste sigs. This can be useful if you use the exact same syntax for in-game bookmarks; while creating the bookmark, you can just ctrl-A ctrl-C and then ctrl-V into Tripwire.
 
 The input box accepts extended Avanto bookmark syntax and always creates the connections in the *currently active system*. The main differences to the common lazy in-game bookmark are:
 
