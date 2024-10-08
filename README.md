@@ -21,7 +21,6 @@ The input box accepts extended Avanto bookmark syntax and always creates the con
 
 - Wormhole life/mass/size (E=EOL, C=Crit, D/H=Half-mass, F/S=frigate hole) must be included. The order of these does not matter as long as they're in the 3rd block.
 - The wormhole type (K162, H296, B274, etc.) must be appended to the input.
-- Pound signs (#) and other special characters used for sorting the in-game bookmarks list should not be included.
 - An optional comment in parenthesis, such as (sig) or (DO NOT WARP), can be added to the end. This will be included in the name of the wormhole connection created.
 
 An example input is: `K5A ABC ECF K162 (bubbled)`. Assuming the currently active system is a C5 hole, this input will create the following wormhole in the currently active system:

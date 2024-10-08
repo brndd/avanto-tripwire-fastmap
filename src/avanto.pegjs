@@ -5,7 +5,7 @@
 }
 
 start
-  = hole:hole _? comment:comment? {return hole.concat(comment);}
+  = _? "#"? _? hole:hole _? comment:comment? _? {return hole.concat(comment);}
 
 hole
   = first:first _ sig:sig _ third:third _ type:type {return [first, sig, third, type];}
