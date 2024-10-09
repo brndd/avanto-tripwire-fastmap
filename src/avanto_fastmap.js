@@ -6,7 +6,7 @@
 // @downloadURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js
 // @updateURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.meta.js
 // @grant       none
-// @version     0.3.1
+// @version     0.3.2
 // @author      burneddi
 // @description Adds a quick input box for adding wormholes to Tripwire using Avanto bookmark syntax.
 // ==/UserScript==
@@ -384,8 +384,9 @@ syntaxHintBox.style.fontFamily = 'Verdana, "Helvetica Neue", Arial, sans-serif'
 syntaxHintBox.style.fontSize = '10px';
 syntaxHintBox.innerHTML = `
 <b>Input a wormhole signature in the following format:</b><br>
-<span style="font-family: monospace;">[chain][class][depth] [sig] [size/mass/life] [type] [comment]</span><br><br>
-For example: <span style="font-family: monospace;">H5A ABC EC H296 (sig)</span><br><br>
+<span style="font-family: monospace;">[chain][class][depth] [sig] [type] [size/mass/life] [comment]</span><br><br>
+For example: <span style="font-family: monospace;">H5A ABC H296 EC (bubbled)</span><br>
+[type] and [size/mass/life] can be in either order.<br><br>
 <b>Chain:</b><br>
 &nbsp;&nbsp;- Any single letter.<br>
 <b>Class:</b><br>
@@ -395,10 +396,10 @@ For example: <span style="font-family: monospace;">H5A ABC EC H296 (sig)</span><
 &nbsp;&nbsp;- A-Z (beyond 26: AA, AB, ..., AZ, BA, ...).<br>
 <b>Sig:</b><br>
 &nbsp;&nbsp;- The letter part of the signature.<br>
-<b>Life/Mass/Lifetime (opt.):</b><br>
-&nbsp;&nbsp;- C (crit) / H, D (half-mass) / E (EOL) / F, S (frig).<br>
 <b>Type:</b><br>
 &nbsp;&nbsp;- K162, H296, B274...<br>
+<b>Life/Mass/Lifetime (opt.):</b><br>
+&nbsp;&nbsp;- C (crit) / H, D (half-mass) / E (EOL) / F, S (frig).<br>
 <b>Comment (opt.):</b><br>
 &nbsp;&nbsp;- Any text in parenthesis (like this). Added to connection name after other info.
 `;

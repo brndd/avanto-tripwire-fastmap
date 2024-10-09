@@ -1,14 +1,9 @@
-{
-  var seenSize = false;
-  var seenMass = false;
-  var seenLife = false;
-}
-
 start
   = _? "#"? _? hole:hole _? comment:comment? _? {return hole.concat(comment);}
 
 hole
   = first:first _ sig:sig _ third:third _ type:type {return [first, sig, third, type];}
+  / first:first _ sig:sig _ type:type _ third:third {return [first, sig, third, type];}
   / first:first _ sig:sig _ type:type {return [first, sig, null, type];}
 
 //this seemingly redundant name makes errors prettier
@@ -65,23 +60,32 @@ THIRD PART: size/mass/lifetime specifiers,
 e.g. E (end-of-life), C (crit), H (half), F (frigate),
 S (small, synonymous with frigate)
 */
-third "size/mass/lifetime"
-  = holeIdentifier+
+third
+  = size mass life
+  / size life mass
+  / mass size life
+  / mass life size
+  / life size mass
+  / life mass size
+  / size mass
+  / size life
+  / mass size
+  / mass life
+  / life size
+  / life mass
+  / s:size { return [s]; }
+  / m:mass { return [m]; }
+  / l:life { return [l]; }
 
-holeIdentifier
-  = ident:sizeIdentifier &{ if (!seenSize) { seenSize = true; return true; } else { return false; }} {return ident;}
-  / ident:massIdentifier &{ if (!seenMass) { seenMass = true; return true; } else { return false; }} {return ident;}
-  / ident:lifeIdentifier &{ if (!seenLife) { seenLife = true; return true; } else { return false; }} {return ident;}
-
-sizeIdentifier
+size "size"
   = [fs]i { return "F"; }
 
-massIdentifier
+mass "mass"
   = [hd]i { return "H"; }
   / "C"i
 
-lifeIdentifier
-  = "E"i
+life "life"
+  = "E"i { return "E"; }
 
 /*
 FOURTH PART: type of the wormhole (C247, H900, K162, etc.)
