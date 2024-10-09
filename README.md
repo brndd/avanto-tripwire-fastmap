@@ -19,20 +19,20 @@ If you prefer, you can also paste the wormhole string into Tripwire like you wou
 
 The input box accepts extended Avanto bookmark syntax and always creates the connections in the *currently active system*. The main differences to the common lazy in-game bookmark are:
 
-- Wormhole life/mass/size (E=EOL, C=Crit, D/H=Half-mass, F/S=frigate hole) must be included. The order of these does not matter as long as they're in the 3rd block.
-- The wormhole type (K162, H296, B274, etc.) must be appended to the input.
+- The wormhole type (K162, H296, B274, etc.) must be included.
+- Wormhole life/mass/size (E=EOL, C=Crit, D/H=Half-mass, F/S=frigate hole) must be included. The order of these between one another does not matter, but duplicate/conflicting identifiers are not allowed. This is optional; if omitted, the hole is assumed to be a fresh non-frigate hole.
 - An optional comment in parenthesis, such as (sig) or (DO NOT WARP), can be added to the end. This will be included in the name of the wormhole connection created.
 
-An example input is: `K5A ABC ECF K162 (bubbled)`. Assuming the currently active system is a C5 hole, this input will create the following wormhole in the currently active system:
+An example input is: `K5A ABC K162 ECF (bubbled)`. Assuming the currently active system is a C5 hole, this input will create the following wormhole in the currently active system:
 
 - Name: K5A ABC (bubbled)
 - Life: End-of-life (the "E" in "ECF")
 - Mass: Critical (the "C" in "ECF")
-- Size: Small ships only (the "F" in "ECF")
 - Sig type on this side: K162
+- Size: Small ships only (the "F" in "ECF")
 - Sig type on other side: C008 (frig holes into C5 are always this type)
 
-Had we instead input `K5A ABC EC K162`, the sig type on the other side would be H296, because non-frigate C5>C5 connections are always this type. If we were in a C3 instead, it would be M267, the type for C5>C3 connections.
+Had we instead input `K5A ABC K162 EC`, the sig type on the other side would be H296, because non-frigate C5>C5 connections are always this type. If we were in a C3 instead, it would be M267, the type for C5>C3 connections.
 
 The box looks like this with the syntax help open. The syntax view is hidden by default though.
 
