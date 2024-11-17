@@ -6,7 +6,7 @@
 // @downloadURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js
 // @updateURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.meta.js
 // @grant       none
-// @version     0.3.2
+// @version     0.3.3
 // @author      burneddi
 // @description Adds a quick input box for adding wormholes to Tripwire using Avanto bookmark syntax.
 // ==/UserScript==
@@ -189,8 +189,13 @@ fastmap.addWormhole = function (parsedWh) {
     else if (parsedWh.type == "K162" && parsedWh.class != "Unknown") {
         let eligibleTypes = wormholeAnalysis.eligibleWormholeTypes(sourceID, targetClass);
         let isFrig = parsedWh.isFrig;
-        if (isFrig) {
-            let eligibles = eligibleTypes.from.filter((c) => c.jump <= 5000000);
+        // If there's only one possible connection,
+        // the user probably means that regardless of what they specify for the frig status.
+        if (eligibleTypes.to.length == 1) {
+            otherSide = eligibleTypes.to[0].key;
+        }
+        else if (isFrig) {
+            let eligibles = eligibleTypes.to.filter((c) => c.jump <= 5000000);
             if (eligibles.length == 0) {
                 let sourceType = systemAnalysis.analyse(sourceID).genericSystemType;
                 let targetName = IDToSystemName[targetClass] != undefined ? IDToSystemName[targetClass] : targetClass;
@@ -214,7 +219,7 @@ fastmap.addWormhole = function (parsedWh) {
     if (sigs.length == 0) {
         throw new Error("No signatures in system (paste your sig list first).");
     }
-    let matchedSigs = sigs.filter((s) => s.signatureID.slice(0, 3).toUpperCase() === parsedWh.sig);
+    let matchedSigs = sigs.filter((s) => s.signatureID && s.signatureID.slice(0, 3).toUpperCase() == parsedWh.sig);
     //TODO: disambiguate the rare edge case of multiple matches, error out if sig not found in system(?)
     let sigObj = {};
     let fullSig = "";
