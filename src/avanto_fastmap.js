@@ -6,7 +6,7 @@
 // @downloadURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js
 // @updateURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.meta.js
 // @grant       none
-// @version     0.3.4
+// @version     0.5.0
 // @author      burneddi
 // @description Adds a quick input box for adding wormholes to Tripwire using Avanto bookmark syntax.
 // ==/UserScript==
@@ -71,6 +71,13 @@ const IDToSystemName = {
     "30002086": "Turnur"
 }
 
+class WhAddError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "WhAddError";
+    }
+}
+
 VM.shortcut.register('a-s', () => {
   displayInputBox();
 });
@@ -89,9 +96,11 @@ fastmap.parse = function(text) {
         sig: null,
         isFrig: null,
         remainingLife: null,
+        remainingLifeSeconds: null,
         remainingMass: null,
         type: null,
-        comment: null
+        comment: null,
+        origText: text
     };
 
     let res = peggy.parse(text);
@@ -111,25 +120,29 @@ fastmap.parse = function(text) {
     wh.sig = res[1].toUpperCase();
 
     wh.remainingLife = "stable";
+    wh.remainingLifeSeconds = 16 * 60 * 60;
     wh.remainingMass = "stable";
     if (res[2] != null) {
         for (let i = 0; i < res[2].length; i++) {
             let c = res[2][i].toUpperCase();
-            switch (c) {
-                case "F":
-                case "S":
-                    wh.isFrig = true;
-                    break;
-                case "C":
-                    wh.remainingMass = "critical";
-                    break;
-                case "H":
-                case "D":
-                    wh.remainingMass = "destab";
-                    break;
-                case "E":
+            if (c == "F" || c == "S") {
+                wh.isFrig = true;
+            }
+            else if (c == "C") {
+                wh.remainingMass = "critical";
+            }
+            else if (c == "H" || c == "D") {
+                wh.remainingMass = "destab";
+            }
+            else if (c.match(/[0-9]+/)) {
+                const life = parseInt(c);
+                if (life <= 4) {
                     wh.remainingLife = "critical";
-                    break;
+                }
+                else {
+                    wh.remainingLife = "stable";
+                }
+                wh.remainingLifeSeconds = life * 60 * 60;
             }
         }
     }
@@ -141,219 +154,275 @@ fastmap.parse = function(text) {
     return wh;
 }
 
-fastmap.addWormhole = function (parsedWh) {
+fastmap.addWormholes = function (parsedWhArray) {
     let sourceID = viewingSystemID;
-
-    //Error checking
-    if (parsedWh.type != "K162" && appData.wormholes[parsedWh.type] == undefined) {
-        throw new Error("Invalid wormhole type");
-    }
-
-    let targetClass = parsedWh.class;
-    //Figure out the other side
-    let otherSide = "????";
-    if (parsedWh.type != "K162") {
-        otherSide = "K162";
-        //Figure out the class from the type, overriding the user input
-        let target = appData.wormholes[parsedWh.type].leadsTo;
-
-        //Stupid hack for Thera, Turnur and drifter WHs
-        //because Tripwire wants the system ID, not the name
-        switch (target) {
-            case "Thera":
-                targetClass = "31000005";
-                break;
-            case "J055520": //Sentinel
-                targetClass = "31000001";
-                break;
-            case "J110145": //Barbican
-                targetClass = "31000002";
-                break;
-            case "J164710": //Vidette
-                targetClass = "31000003";
-                break;
-            case "J200727": //Conflux
-                targetClass = "31000004";
-                break;
-            case "J174618": //Redoubt
-                targetClass = "31000006";
-                break;
-            case "Turnur":
-                targetClass = "30002086";
-                break;
-            default:
-                targetClass = target;
-                break;
-        }
-    }
-    else if (parsedWh.type == "K162" && parsedWh.class != "Unknown") {
-        let eligibleTypes = wormholeAnalysis.eligibleWormholeTypes(sourceID, targetClass);
-        let isFrig = parsedWh.isFrig;
-        // If there's only one possible connection,
-        // the user probably means that regardless of what they specify for the frig status.
-        if (eligibleTypes.to.length == 1) {
-            otherSide = eligibleTypes.to[0].key;
-        }
-        else if (isFrig) {
-            let eligibles = eligibleTypes.to.filter((c) => c.jump <= 5000000);
-            if (eligibles.length == 0) {
-                let sourceType = systemAnalysis.analyse(sourceID).genericSystemType;
-                let targetName = IDToSystemName[targetClass] != undefined ? IDToSystemName[targetClass] : targetClass;
-                throw new Error(`Impossible connection: no frigate holes from from ${targetName} to ${sourceType}.`);
-            }
-            otherSide = eligibles[0].key;
-        }
-        else {
-            let eligibles = eligibleTypes.to.filter((c) => c.jump > 5000000);
-            if (eligibles.length == 0) {
-                let sourceType = systemAnalysis.analyse(sourceID).genericSystemType;
-                let targetName = IDToSystemName[targetClass] != undefined ? IDToSystemName[targetClass] : targetClass;
-                throw new Error(`Impossible connection: no non-frigate holes from from ${targetName} to ${sourceType}.`);
-            }
-            otherSide = eligibles[0].key;
-        }
-    }
-
-    //Figure out the full signature
+    let errors = new Array(parsedWhArray.length).fill(null);
+    let wormholesPayload = [];
+    
     let sigs = Object.values(tripwire.signatures.currentSystem);
     if (sigs.length == 0) {
         throw new Error("No signatures in system (paste your sig list first).");
     }
-    let matchedSigs = sigs.filter((s) => s.signatureID && s.signatureID.slice(0, 3).toUpperCase() == parsedWh.sig);
-    //TODO: disambiguate the rare edge case of multiple matches, error out if sig not found in system(?)
-    let sigObj = {};
-    let fullSig = "";
-    if (matchedSigs.length) {
-        sigObj = matchedSigs[0];
-        fullSig = sigObj.signatureID;
-    }
-    else {
-        throw new Error("No matching sig in system.");
-    }
 
-    let maxLife = 24 * 60 * 60;
-    let holedata = appData.wormholes[(parsedWh.type == "K162" ? otherSide : parsedWh.type)];
-    if (holedata != undefined) {
-        maxLife = holedata.life.substring(0, 2) * 60 * 60;
-    }
-    
-    //More Tripwire idiosyncracies: this function only works with system names and genericSystemTypes
-    let tar = targetClass;
-    if (IDToSystemName[targetClass] != undefined) {
-        tar = IDToSystemName[targetClass];
-    }
-    let leadsTo = wormholeAnalysis.targetSystemID(tar, parsedWh.type);
+    for (let i = 0; i < parsedWhArray.length; i++) {
+        let parsedWh = parsedWhArray[i];
 
-    //Reconstruct name
-    //let thirdPart = `${parsedWh.isFrig ? "F" : ""}${parsedWh.remainingMass == "critical" ? "C" : parsedWh.remainingMass == "destab" ? "H" : ""}${parsedWh.remainingLife == "critical" ? "E" : ""}`;
-    let name = `${parsedWh.chain}${TWToShortClass[targetClass]}${parsedWh.depth} ${parsedWh.sig}${parsedWh.comment != null ? ` ${parsedWh.comment}` : ""}`;
-    //console.log(`Reconstructed name: ${name}`);
-    //console.log(`This is a wormhole in the ${wh.chain} chain leading to ${wh.class} at depth ${wh.depth} with sig ID ${fullSig}. The other side's WH type is ${otherSide}. The max life is ${maxLife} seconds.`);
+        try {
+            //Error checking
+            if (parsedWh.type != "K162" && appData.wormholes[parsedWh.type] == undefined) {
+                throw new WhAddError("Invalid wormhole type");
+            }
 
-    //Add the actual sig to Tripwire
+            let targetClass = parsedWh.class;
+            //Figure out the other side
+            let otherSide = "????";
+            if (parsedWh.type != "K162") {
+                otherSide = "K162";
+                //Figure out the class from the type, overriding the user input
+                let target = appData.wormholes[parsedWh.type].leadsTo;
 
-    let payload = {};
-    let undo = [];
-    let signature = {
-        "id": sigObj.id,
-        "signatureID": fullSig,
-        "systemID": sourceID,
-        "type": "wormhole",
-        "name": name,
-        "lifeLength": maxLife
-    };
+                //Stupid hack for Thera, Turnur and drifter WHs
+                //because Tripwire wants the system ID, not the name
+                switch (target) {
+                    case "Thera":
+                        targetClass = "31000005";
+                        break;
+                    case "J055520": //Sentinel
+                        targetClass = "31000001";
+                        break;
+                    case "J110145": //Barbican
+                        targetClass = "31000002";
+                        break;
+                    case "J164710": //Vidette
+                        targetClass = "31000003";
+                        break;
+                    case "J200727": //Conflux
+                        targetClass = "31000004";
+                        break;
+                    case "J174618": //Redoubt
+                        targetClass = "31000006";
+                        break;
+                    case "Turnur":
+                        targetClass = "30002086";
+                        break;
+                    default:
+                        targetClass = target;
+                        break;
+                }
+            }
+            else if (parsedWh.type == "K162" && parsedWh.class != "Unknown") {
+                let eligibleTypes = wormholeAnalysis.eligibleWormholeTypes(sourceID, targetClass);
+                let isFrig = parsedWh.isFrig;
+                // If there's only one possible connection,
+                // the user probably means that regardless of what they specify for the frig status.
+                if (eligibleTypes.to.length == 1) {
+                    otherSide = eligibleTypes.to[0].key;
+                }
+                else if (isFrig) {
+                    let eligibles = eligibleTypes.to.filter((c) => c.jump <= 5000000);
+                    if (eligibles.length == 0) {
+                        let sourceType = systemAnalysis.analyse(sourceID).genericSystemType;
+                        let targetName = IDToSystemName[targetClass] != undefined ? IDToSystemName[targetClass] : targetClass;
+                        throw new WhAddError(`Impossible connection: no frigate holes from from ${targetName} to ${sourceType}.`);
+                    }
+                    otherSide = eligibles[0].key;
+                }
+                else {
+                    let eligibles = eligibleTypes.to.filter((c) => c.jump > 5000000);
+                    if (eligibles.length == 0) {
+                        let sourceType = systemAnalysis.analyse(sourceID).genericSystemType;
+                        let targetName = IDToSystemName[targetClass] != undefined ? IDToSystemName[targetClass] : targetClass;
+                        throw new WhAddError(`Impossible connection: no non-frigate holes from from ${targetName} to ${sourceType}.`);
+                    }
+                    otherSide = eligibles[0].key;
+                }
+            }
 
-    let signature2 = {
-        "id": "",
-        "signatureID": "",
-        "systemID": leadsTo == null ? "" : leadsTo,
-        "type": "wormhole",
-        "name": "",
-        "lifeLength": maxLife
-    };
-    let type = null;
-    let parent = null;
-    if (parsedWh.type.length > 0 && appData.wormholes[parsedWh.type] != undefined && parsedWh.type != "K162") {
-        parent = "initial";
-        type = parsedWh.type;
-    }
-    else if (otherSide.length > 0 && appData.wormholes[otherSide] != undefined && otherSide != "K162") {
-        parent = "secondary";
-        type = otherSide;
-    }
-    else if (targetClass == "Unknown" && otherSide == "????") {
-        parent = "secondary";
-        type = otherSide;
-    }
-    else {
-        //TODO: fail more gracefully
-        throw new Error("undefined WH type");
-    }
-    let wormhole = {
-        "id": "",
-        "type": type,
-        "parent": parent,
-        "life": parsedWh.remainingLife,
-        "mass": parsedWh.remainingMass
-    };
+            //Figure out the full signature
+            let matchedSigs = sigs.filter((s) => s.signatureID && s.signatureID.slice(0, 3).toUpperCase() == parsedWh.sig);
+            //TODO: disambiguate the rare edge case of multiple matches, error out if sig not found in system(?)
+            let sigObj = {};
+            let fullSig = "";
+            if (matchedSigs.length) {
+                sigObj = matchedSigs[0];
+                fullSig = sigObj.signatureID;
+            }
+            else {
+                throw new WhAddError("No matching sig in system.");
+            }
 
-    //Check if there's a wormhole associated with this signature and find it if it exists
-    if (sigObj.type == "wormhole") {
-        let wormholes = Object.values(tripwire.client.wormholes).filter((s) => s.initialID == sigObj.id);
-        if (!wormholes.length) {
-            throw new Error("sig type is wormhole but couldn't find matching wormhole");
+            let maxLife = 24 * 60 * 60;
+            let holedata = appData.wormholes[(parsedWh.type == "K162" ? otherSide : parsedWh.type)];
+            if (holedata != undefined) {
+                maxLife = holedata.life.substring(0, 2) * 60 * 60;
+            }
+            
+            //More Tripwire idiosyncracies: this function only works with system names and genericSystemTypes
+            let tar = targetClass;
+            if (IDToSystemName[targetClass] != undefined) {
+                tar = IDToSystemName[targetClass];
+            }
+            let leadsTo = wormholeAnalysis.targetSystemID(tar, parsedWh.type);
+
+            //Reconstruct name
+            //let thirdPart = `${parsedWh.isFrig ? "F" : ""}${parsedWh.remainingMass == "critical" ? "C" : parsedWh.remainingMass == "destab" ? "H" : ""}${parsedWh.remainingLife == "critical" ? "E" : ""}`;
+            let name = `${parsedWh.chain}${TWToShortClass[targetClass]}${parsedWh.depth} ${parsedWh.sig}${parsedWh.comment != null ? ` ${parsedWh.comment}` : ""}`;
+            //console.log(`Reconstructed name: ${name}`);
+            //console.log(`This is a wormhole in the ${wh.chain} chain leading to ${wh.class} at depth ${wh.depth} with sig ID ${fullSig}. The other side's WH type is ${otherSide}. The max life is ${maxLife} seconds.`);
+
+            //Add the actual sig to Tripwire
+            let undo = [];
+            let wormhole = null;
+            let signature = null;
+            let signature2 = null;
+            //Check if there's a wormhole associated with this signature and use that instead if it exists
+            if (sigObj.type == "wormhole") {
+                let wormholes = Object.values(tripwire.client.wormholes).filter((s) => s.initialID == sigObj.id || s.secondaryID == sigObj.id);
+                if (!wormholes.length) {
+                    throw new WhAddError("sig type is wormhole but couldn't find matching wormhole");
+                }
+                let existingWh = wormholes[0];
+                wormhole = {
+                    "id": existingWh.id,
+                    "life": parsedWh.remainingLife,
+                    "mass": parsedWh.remainingMass
+                }
+
+                //update the wormhole initial and type based on which side we're editing
+                //if this looks like insane nonsense it's because this is copypasted from Tripwire source
+                if (parsedWh.type.length > 0 && appData.wormholes[parsedWh.type] != undefined && parsedWh.type != "K162") {
+                    wormhole.parent = existingWh.initialID == sigObj.id ? "initial" : "secondary";
+                    wormhole.type = parsedWh.type;
+                }
+                else if (otherSide.length > 0 && appData.wormholes[otherSide] != undefined && otherSide != "K162") {
+                    wormhole.parent = existingWh.initialID == sigObj.id ? "secondary" : "initial";
+                    wormhole.type = otherSide;
+                }
+                else if (targetClass == "Unknown" && otherSide == "????") {
+                    wormhole.parent = existingWh.initialID == sigObj.id ? "secondary" : "initial";
+                    wormhole.type = otherSide;
+                }
+                else {
+                    throw new Error("undefined WH type");
+                }
+
+                //Tripwire expects Y-m-d H:i:s in UTC, this wonderful hack gets us that
+                //let lifeLeft = new Date(Date.now() + parsedWh.remainingLifeSeconds * 1000).toISOString().slice(0, 19).replace('T', ' ');
+                let lifeLeft = "+" + parsedWh.remainingLifeSeconds + " seconds";
+                //console.log("lifeLeft: " + lifeLeft);
+
+                let existingSig = tripwire.signatures.list[existingWh.initialID];
+                let existingSig2 = tripwire.signatures.list[existingWh.secondaryID];
+
+                signature = {
+                    "type": "wormhole",
+                    "lifeLength": maxLife,
+                    "lifeLeft": lifeLeft
+                };
+
+                signature2 = {
+                    "type": "wormhole",
+                    "lifeLength": maxLife,
+                    "lifeLeft": lifeLeft
+                };
+
+                if (existingWh.initialID == sigObj.id) {
+                    signature.id = existingWh.initialID;
+                    signature.signatureID = fullSig;
+                    signature.systemID = sourceID;
+                    signature.name = name;
+                    
+                    signature2.id = existingWh.secondaryID;
+                    if (existingSig2.systemID == null) {
+                        signature2.systemID = leadsTo == null ? "" : leadsTo;
+                    }
+                    else {
+                        signature2.systemID = existingSig2.systemID;
+                    }
+                }
+                else {
+                    signature2.id = existingWh.initialID;
+                    signature2.signatureID = fullSig;
+                    signature2.systemID = sourceID;
+                    signature2.name = name;
+
+                    signature.id = existingWh.secondaryID;
+                    if (existingSig.systemID == null) {
+                        signature.systemID = leadsTo == null ? "" : leadsTo;
+                    }
+                    else {
+                        signature.systemID = existingSig.systemID;
+                    }
+                }
+            }
+            else {
+                signature = {
+                    "id": sigObj.id,
+                    "signatureID": fullSig,
+                    "systemID": sourceID,
+                    "type": "wormhole",
+                    "name": name,
+                    "lifeLength": maxLife,
+                    "lifeLeft": "+" + parsedWh.remainingLifeSeconds + " seconds"
+                };
+
+                signature2 = {
+                    "id": "",
+                    "signatureID": "",
+                    "systemID": leadsTo == null ? "" : leadsTo,
+                    "type": "wormhole",
+                    "name": "",
+                    "lifeLength": maxLife,
+                    "lifeLeft": "+" + parsedWh.remainingLifeSeconds + " seconds"
+                };
+
+                let type = null;
+                let parent = null;
+                if (parsedWh.type.length > 0 && appData.wormholes[parsedWh.type] != undefined && parsedWh.type != "K162") {
+                    parent = "initial";
+                    type = parsedWh.type;
+                }
+                else if (otherSide.length > 0 && appData.wormholes[otherSide] != undefined && otherSide != "K162") {
+                    parent = "secondary";
+                    type = otherSide;
+                }
+                else if (targetClass == "Unknown" && otherSide == "????") {
+                    parent = "secondary";
+                    type = otherSide;
+                }
+                else {
+                    //TODO: fail more gracefully
+                    throw new WhAddError("undefined WH type");
+                }
+
+                wormhole = {
+                    "id": "",
+                    "type": type,
+                    "parent": parent,
+                    "life": parsedWh.remainingLife,
+                    "mass": parsedWh.remainingMass
+                };
+            }
+            wormholesPayload.push({"wormhole": wormhole, "signatures": [signature, signature2]});
+        } catch (error) {
+            errors[i] = error;
         }
-        let existingWh = wormholes[0];
-        wormhole.id = existingWh.id;
-        signature2.id = existingWh.secondaryID;
-
-        //update the wormhole initial and type based on which side we're editing
-        if (parsedWh.type.length > 0 && appData.wormholes[parsedWh.type] != undefined && parsedWh.type != "K162") {
-            wormhole.parent = existingWh.initialID == sigObj.id ? "initial" : "secondary";
-            wormhole.type = parsedWh.type;
-        }
-        else if (otherSide.length > 0 && appData.wormholes[otherSide] != undefined && otherSide != "K162") {
-            wormhole.parent = existingWh.initialID == sigObj.id ? "secondary" : "initial";
-            wormhole.type = otherSide;
-        }
-        else if (targetClass == "Unknown" && otherSide == "????") {
-            wormhole.parent = existingWh.initialID == sigObj.id ? "secondary" : "initial";
-            wormhole.type = otherSide;
-        }
-        else {
-            throw new Error("undefined WH type");
-        }
-
-        if (existingWh) {
-            //used to be a wormhole
-            //undo.push({"wormhole": existingWh, "signatures": [tripwire.client.signatures[signature.id], tripwire.client.signatures[signature2.id]]});
-        }
-        else {
-            //used to be an unknown sig
-            //undo.push(tripwire.client.signatures[signature.id]);
-        }
-    }
-    payload = {"signatures": {"update": [{"wormhole": wormhole, "signatures": [signature, signature2]}]}};
-
-    let success = function(data) {
-        //TODO: this is where we should do some undo stuff
-
-        // if (data.resultSet && data.resultSet[0] == true) {
-        //     $("#undo").removeClass("disabled");
-        //     if (sigObj.type != "wormhole") {
-        //         undo = data.results;
-        //     }
-
-        // }
-        console.log("Op success!");
-    }
-    let always = function() {
-        console.log("Posted payload.");
     }
 
-    //console.log("And this is where we would send the following payload:");
-    //console.log(payload);
-    tripwire.refresh('refresh', payload, success, always);
+    if (wormholesPayload.length > 0) {
+        let payload = {"signatures":  {"update": wormholesPayload}};
+
+        let success = function(data) {
+            console.log("Op success!");
+        }
+        let always = function() {
+            console.log("Posted payload.");
+        }
+
+        tripwire.refresh('refresh', payload, success, always);
+    }
+
+    return errors;
 }
 
 //begin:chatgpt
@@ -501,14 +570,20 @@ inputBox.addEventListener('keydown', (event) => {
 
         try {
             let parsedWh = fastmap.parse(content);
-            fastmap.addWormhole(parsedWh);
+            let error = fastmap.addWormholes([parsedWh])[0];
 
-            // Hide the input box after successful submission
-            inputBoxContainer.style.display = 'none';
+            if (error == null) {
+                // Hide the input box after successful submission
+                inputBoxContainer.style.display = 'none';
+            }
+            else {
+                throw error;
+            }
         } catch (error) {
             // Display the error message
             errorBox.textContent = "FATAL: " + error.message;
             errorBox.style.display = 'block';
+            console.log(error);
         }
     }
 });
@@ -545,9 +620,24 @@ inputBox.addEventListener("input", debounce(() => {
 function pasteHandler(e) {
     const content = window.clipboardData ? window.clipboardData.getData("Text") : (e.originalEvent || e).clipboardData.getData('text/plain');
 
-    // ignore input if it's not a single line, or contains tabs
-    if (/[\r\n\t]/.test(content)) {
-        return false;
+    // this looks like multi-line input, check if it's from the bookmark window
+    if (/[\r\n]/.test(content)) {
+        const lines = content.split(/\r?\n/).map(line => line.split('\t'));
+        
+        // We only care if there are any possible WH bookmarks here, which always have the type "Coordinate" (as they are points in space)
+        // Also we don't want to see bookmarks in other systems besides the currently active one (for now, at least).
+        const filtered = lines.filter(
+            line => line[1] == "Coordinate" && line[3] == viewingSystem
+        );
+        if (filtered.length == 0) {
+            //console.log("not parsing multi-line paste");
+            return false;
+        }
+        
+        //console.log("parsing multi-line paste");
+        e.preventDefault();
+        parseMultiLinePaste(filtered)
+        return true;
     }
 
     // ignore input if the focus is on a textarea
@@ -557,17 +647,73 @@ function pasteHandler(e) {
 
     e.preventDefault();
 
+    parseSingleLinePaste(content)
+    return true;
+}
+
+function parseSingleLinePaste(content) {
     try {
         // try parsing the input as a wormhole signature
+        content = content.split('\t')[0];
         const parsedWh = fastmap.parse(content);
-        fastmap.addWormhole(parsedWh);
-        // show success message using tripwire notification
-        Notify.trigger("Fastmap: Added wormhole via paste.");
+        let error = fastmap.addWormholes([parsedWh])[0];
+        if (error == null) {
+            // show success message using tripwire notification
+            Notify.trigger("Fastmap: Added wormhole via paste.");
+        }
+        else {
+            throw error;
+        }
     } catch (error) {
         // show error message using tripwire notification
         Notify.trigger("Fastmap: " + error.message, "yellow", 5000);
     }
-    return true;
+}
+
+function parseMultiLinePaste(lines) {
+    var validWhs = 0;
+    var invalidWhs = 0;
+    var parsedWhArray = [];
+    lines.forEach(line => {
+        const bmname = line[0]
+        try {
+            const parsedWh = fastmap.parse(bmname);
+            parsedWhArray.push(parsedWh);
+        } catch (error) {
+            if (error instanceof peggy.SyntaxError) {
+                // If it looks like it might be intended to be a WH (starts with a #), count the failure
+                if (/^\s*#/.test(bmname)) {
+                    invalidWhs++;
+                    const errmsg = `Fastmap: Syntax error on "${bmname}": ${error.message}`;
+                    Notify.trigger(errmsg, "yellow", 10000);
+                    console.log(error);
+                }
+            }
+        }
+    });
+
+    let errs = [];
+
+    try {
+        errs = fastmap.addWormholes(parsedWhArray);
+    } catch (error) {
+        Notify.trigger(`Fastmap: ${error.message}`, "yellow", 10000);
+    }
+
+    for (let i = 0; i < errs.length; i++) {
+        let error = errs[i];
+        if (error != null) {
+                invalidWhs++;
+                const errmsg = `Fastmap: Error adding "${parsedWhArray[i].origText}": ${error.message}`;
+                Notify.trigger(errmsg, "yellow", 10000);
+                console.log(error);
+        }
+        else {
+            validWhs++;
+        }
+    }
+
+    Notify.trigger(`Fastmap: Added ${validWhs} WHs, skipped ${invalidWhs} invalid WHs.`);
 }
 
 //Intercept Tripwire paste handler and replace it with our own

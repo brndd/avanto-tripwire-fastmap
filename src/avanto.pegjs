@@ -57,8 +57,8 @@ sig "signature"
 
 /*
 THIRD PART: size/mass/lifetime specifiers,
-e.g. E (end-of-life), C (crit), H (half), F (frigate),
-S (small, synonymous with frigate)
+e.g. E (end-of-life, parsed as 1h), C (crit), H (half), F (frigate), S (small, synonymous with frigate),
+any sequence of numbers (number of hours left on hole)
 */
 third
   = size mass life
@@ -85,7 +85,8 @@ mass "mass"
   / "C"i
 
 life "life"
-  = "E"i { return "E"; }
+  = "E"i { return "1"; }
+  / $[0-9]+
 
 /*
 FOURTH PART: type of the wormhole (C247, H900, K162, etc.)
