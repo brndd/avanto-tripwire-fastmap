@@ -263,6 +263,9 @@ fastmap.addWormholes = function (parsedWhArray) {
                 tar = IDToSystemName[targetClass];
             }
             let leadsTo = wormholeAnalysis.targetSystemID(tar, parsedWh.type);
+            if (leadsTo == null) {
+                leadsTo = "";
+            }
 
             //Reconstruct name
             //let thirdPart = `${parsedWh.isFrig ? "F" : ""}${parsedWh.remainingMass == "critical" ? "C" : parsedWh.remainingMass == "destab" ? "H" : ""}${parsedWh.remainingLife == "critical" ? "E" : ""}`;
@@ -289,16 +292,12 @@ fastmap.addWormholes = function (parsedWhArray) {
                 }
 
                 //update the wormhole initial and type based on which side we're editing
-                //if this looks like insane nonsense it's because this is copypasted from Tripwire source
+                //if this looks like insane nonsense it's because this is basically copypasted from Tripwire source
                 if (parsedWh.type.length > 0 && appData.wormholes[parsedWh.type] != undefined && parsedWh.type != "K162") {
                     wormhole.parent = existingWh.initialID == sigObj.id ? "initial" : "secondary";
                     wormhole.type = parsedWh.type;
                 }
-                else if (otherSide.length > 0 && appData.wormholes[otherSide] != undefined && otherSide != "K162") {
-                    wormhole.parent = existingWh.initialID == sigObj.id ? "secondary" : "initial";
-                    wormhole.type = otherSide;
-                }
-                else if (targetClass == "Unknown" && otherSide == "????") {
+                else if ((otherSide.length > 0 && appData.wormholes[otherSide] != undefined && otherSide != "K162") || (targetClass == "Unknown" && otherSide == "????")) {
                     wormhole.parent = existingWh.initialID == sigObj.id ? "secondary" : "initial";
                     wormhole.type = otherSide;
                 }
@@ -311,8 +310,17 @@ fastmap.addWormholes = function (parsedWhArray) {
                 let lifeLeft = "+" + parsedWh.remainingLifeSeconds + " seconds";
                 //console.log("lifeLeft: " + lifeLeft);
 
-                let existingSig = tripwire.signatures.list[existingWh.initialID];
-                let existingSig2 = tripwire.signatures.list[existingWh.secondaryID];
+                let existingSig = null;
+                let existingSig2 = null;
+                
+                if (existingWh.initialID == sigObj.id) {
+                    existingSig = tripwire.signatures.list[existingWh.initialID];
+                    existingSig2 = tripwire.signatures.list[existingWh.secondaryID];
+                }
+                else {
+                    existingSig = tripwire.signatures.list[existingWh.secondaryID];
+                    existingSig2 = tripwire.signatures.list[existingWh.initialID];
+                }
 
                 signature = {
                     "type": "wormhole",
@@ -326,33 +334,17 @@ fastmap.addWormholes = function (parsedWhArray) {
                     "lifeLeft": lifeLeft
                 };
 
-                if (existingWh.initialID == sigObj.id) {
-                    signature.id = existingWh.initialID;
-                    signature.signatureID = fullSig;
-                    signature.systemID = sourceID;
-                    signature.name = name;
-                    
-                    signature2.id = existingWh.secondaryID;
-                    if (existingSig2.systemID == null) {
-                        signature2.systemID = leadsTo == null ? "" : leadsTo;
-                    }
-                    else {
-                        signature2.systemID = existingSig2.systemID;
-                    }
+                signature.id = existingSig.id;
+                signature.signatureID = fullSig;
+                signature.systemID = sourceID;
+                signature.name = name;
+                
+                signature2.id = existingSig2.id;
+                if (existingSig2.systemID == null) {
+                    signature2.systemID = leadsTo;
                 }
                 else {
-                    signature2.id = existingWh.initialID;
-                    signature2.signatureID = fullSig;
-                    signature2.systemID = sourceID;
-                    signature2.name = name;
-
-                    signature.id = existingWh.secondaryID;
-                    if (existingSig.systemID == null) {
-                        signature.systemID = leadsTo == null ? "" : leadsTo;
-                    }
-                    else {
-                        signature.systemID = existingSig.systemID;
-                    }
+                    signature2.systemID = existingSig2.systemID;
                 }
             }
             else {
@@ -369,7 +361,7 @@ fastmap.addWormholes = function (parsedWhArray) {
                 signature2 = {
                     "id": "",
                     "signatureID": "",
-                    "systemID": leadsTo == null ? "" : leadsTo,
+                    "systemID": leadsTo,
                     "type": "wormhole",
                     "name": "",
                     "lifeLength": maxLife,
