@@ -473,7 +473,7 @@ For example: <span style="font-family: monospace;">H5A ABC H296 EC (bubbled)</sp
 <b>Type:</b><br>
 &nbsp;&nbsp;- K162, H296, B274...<br>
 <b>Life/Mass/Lifetime (opt.):</b><br>
-&nbsp;&nbsp;- C (crit) / H, D (half-mass) / E (EOL) / F, S (frig).<br>
+&nbsp;&nbsp;- C (crit) / H, D (half-mass) / E (1h EOL) <i>OR</i> number (life in hours) / F, S (frig).<br>
 <b>Comment (opt.):</b><br>
 &nbsp;&nbsp;- Any text in parenthesis (like this). Added to connection name after other info.
 `;
