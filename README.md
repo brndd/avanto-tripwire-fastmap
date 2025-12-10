@@ -17,7 +17,7 @@ The quick input box can be opened with the shortcut `Alt-S` (`Ctrl-Cmd-S` on Mac
 
 If you prefer, you can also paste the wormhole string into Tripwire like you would paste sigs. This can be useful if you use the exact same syntax for in-game bookmarks; while creating the bookmark, you can just ctrl-A ctrl-C and then ctrl-V into Tripwire.
 
-**New!** You can now also paste in the contents of the bookmarks window and every valid WH in the current system will be added!
+***NEW!** You can now also paste in the contents of the bookmarks window and every valid WH in the current system will be added!*
 
 The input box accepts extended Avanto bookmark syntax and always creates the connections in the *currently active system*. The main differences to the common lazy in-game bookmark are:
 
