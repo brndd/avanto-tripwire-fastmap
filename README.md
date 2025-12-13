@@ -4,6 +4,10 @@ This userscript adds a simple text input box to Avanto Tripwire
 to facilitate quickly adding new wormhole connections without
 using the mouse.
 
+If you name your bookmarks using the syntax below,
+you can also just paste your bookmarks list into the mapper (after sigs have been added)
+and all valid WHs will be created.
+
 # Installation
 
 1. Install [Violentmonkey](https://violentmonkey.github.io/) or Tampermonkey or some other userscript manager.
