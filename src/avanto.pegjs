@@ -31,16 +31,17 @@ class "class identifier"
 unambiguousIdent
   = "12" / "13" / "14" / "15" / "16" / "17" / "18"
   / "1" / "2" / "3" / "4" / "5" / "6" / "H"i / "L"i / "N"i / "?"
+  / "T"i / "P"i
 
 ambiguousIdent
   = theraIdent
   / trigIdent
 
 theraIdent
-  = "Thera"i / "Th"i {return "Th";}
+  = "Thera"i / "Th"i {return "T";}
 
 trigIdent
-  = "Trig"i / "Tr"i {return "Tr";}
+  = "Trig"i / "Tr"i {return "P";}
 
 //Depth is usually a single letter, but this syntax extends
 //to extra-long chains by allowing arbitrarily many letters

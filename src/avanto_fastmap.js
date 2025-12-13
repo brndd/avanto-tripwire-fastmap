@@ -6,7 +6,7 @@
 // @downloadURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js
 // @updateURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.meta.js
 // @grant       none
-// @version     0.5.1
+// @version     0.5.2
 // @author      burneddi
 // @description Adds a quick input box for adding wormholes to Tripwire using Avanto bookmark syntax.
 // ==/UserScript==
@@ -15,8 +15,8 @@ const ShortClassToTW = {
     "H": "High-Sec",
     "L": "Low-Sec",
     "N": "Null-Sec",
-    "Tr": "Triglavian",
-    "Th": "31000005", //Thera
+    "P": "Triglavian",
+    "T": "31000005", //Thera
     "12": "31000005", //Thera
     "1": "Class-1",
     "2": "Class-2",
@@ -37,8 +37,8 @@ const TWToShortClass = {
     "High-Sec": "H",
     "Low-Sec": "L",
     "Null-Sec": "N",
-    "Triglavian": "Tr",
-    "Thera": "Th",
+    "Triglavian": "P",
+    "Thera": "T",
     "Class-1": "1",
     "Class-2": "2",
     "Class-3": "3",
@@ -52,7 +52,7 @@ const TWToShortClass = {
     "Class-17": "17",
     "Class-18": "18",
     "Unknown": "?",
-    "31000005": "Th",
+    "31000005": "T",
     "31000001": "14",
     "31000002": "15",
     "31000003": "16",
@@ -456,7 +456,7 @@ For example: <span style="font-family: monospace;">H5A ABC H296 EC (bubbled)</sp
 <b>Chain:</b><br>
 &nbsp;&nbsp;- Any single letter.<br>
 <b>Class:</b><br>
-&nbsp;&nbsp;- One of: H / L / N / 1-6 / 13 / Tr, Trig / Th, Thera.<br>
+&nbsp;&nbsp;- One of: H / L / N / 1-6 / 13 / P (Pochven) / T (Thera).<br>
 &nbsp;&nbsp;- You can use ? for unknown class and the mapper will try to infer it from WH type.<br>
 <b>Depth:</b><br>
 &nbsp;&nbsp;- A-Z (beyond 26: AA, AB, ..., AZ, BA, ...).<br>
@@ -637,16 +637,25 @@ function pasteHandler(e) {
     //     return;
     // }
 
-    e.preventDefault();
+    // Check if it's a single bookmark paste
+    let splitcontent = content.split('\t');
+    if (splitcontent.length >= 4 && splitcontent[1] == "Coordinate" && splitcontent[3] == viewingSystem) {
+        e.preventDefault();
+        parseSingleLinePaste(splitcontent[0]);
+        return true;
+    }
+    // Don't parse other tab-containing pastes to parse single-line sig pastes correctly
+    else if (splitcontent.length > 1) {
+        return false;
+    }
 
-    parseSingleLinePaste(content)
+    e.preventDefault();
+    parseSingleLinePaste(content);
     return true;
 }
 
 function parseSingleLinePaste(content) {
     try {
-        // try parsing the input as a wormhole signature
-        content = content.split('\t')[0];
         const parsedWh = fastmap.parse(content);
         let error = fastmap.addWormholes([parsedWh])[0];
         if (error == null) {
