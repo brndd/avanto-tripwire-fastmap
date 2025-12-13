@@ -6,7 +6,8 @@ using the mouse.
 
 If you name your bookmarks using the syntax below,
 you can also just paste your bookmarks list into the mapper (after sigs have been added)
-and all valid WHs will be created.
+and all valid WHs will be created. When doing this it's recommended to prefix WH bookmarks
+with a `#` as then the script will warn you if any WH bookmarks were invalid.
 
 # Installation
 
