@@ -6,7 +6,7 @@
 // @downloadURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js
 // @updateURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.meta.js
 // @grant       none
-// @version     0.5.2
+// @version     0.5.3
 // @author      burneddi
 // @description Adds a quick input box for adding wormholes to Tripwire using Avanto bookmark syntax.
 // ==/UserScript==
@@ -158,11 +158,14 @@ fastmap.addWormholes = function (parsedWhArray) {
     let sourceID = viewingSystemID;
     let errors = new Array(parsedWhArray.length).fill(null);
     let wormholesPayload = [];
+    let wormholesPayload2 = []; //due to Tripwire quirks, to hack 1h lifetime holes in we have to send two updates
     
     let sigs = Object.values(tripwire.signatures.currentSystem);
     if (sigs.length == 0) {
         throw new Error("No signatures in system (paste your sig list first).");
     }
+
+    let addedSigs = {};
 
     for (let i = 0; i < parsedWhArray.length; i++) {
         let parsedWh = parsedWhArray[i];
@@ -171,6 +174,25 @@ fastmap.addWormholes = function (parsedWhArray) {
             //Error checking
             if (parsedWh.type != "K162" && appData.wormholes[parsedWh.type] == undefined) {
                 throw new WhAddError("Invalid wormhole type");
+            }
+
+            //Figure out the full signature
+            let matchedSigs = sigs.filter((s) => s.signatureID && s.signatureID.slice(0, 3).toUpperCase() == parsedWh.sig);
+            //TODO: disambiguate the rare edge case of multiple matches, error out if sig not found in system(?)
+            let sigObj = {};
+            let fullSig = "";
+            if (matchedSigs.length) {
+                sigObj = matchedSigs[0];
+                fullSig = sigObj.signatureID;
+            }
+            else {
+                throw new WhAddError("No matching sig in system.");
+            }
+
+            // Skip sigs we've already added to avoid doing multiple connections from one signature
+            // (which Tripwire will happily allow us to add because lol what is server side validation)
+            if (fullSig in addedSigs) {
+                throw new WhAddError("Tried to create multiple connections from one sig!");
             }
 
             let targetClass = parsedWh.class;
@@ -238,24 +260,12 @@ fastmap.addWormholes = function (parsedWhArray) {
                 }
             }
 
-            //Figure out the full signature
-            let matchedSigs = sigs.filter((s) => s.signatureID && s.signatureID.slice(0, 3).toUpperCase() == parsedWh.sig);
-            //TODO: disambiguate the rare edge case of multiple matches, error out if sig not found in system(?)
-            let sigObj = {};
-            let fullSig = "";
-            if (matchedSigs.length) {
-                sigObj = matchedSigs[0];
-                fullSig = sigObj.signatureID;
-            }
-            else {
-                throw new WhAddError("No matching sig in system.");
-            }
-
             let maxLife = 24 * 60 * 60;
             let holedata = appData.wormholes[(parsedWh.type == "K162" ? otherSide : parsedWh.type)];
             if (holedata != undefined) {
                 maxLife = holedata.life.substring(0, 2) * 60 * 60;
             }
+            let lifeLeft = "+" + parsedWh.remainingLifeSeconds + " seconds";
             
             //More Tripwire idiosyncracies: this function only works with system names and genericSystemTypes
             let tar = targetClass;
@@ -280,6 +290,7 @@ fastmap.addWormholes = function (parsedWhArray) {
             let signature2 = null;
             //Check if there's a wormhole associated with this signature and use that instead if it exists
             if (sigObj.type == "wormhole") {
+                console.log("Adding WH for wormhole sig");
                 let wormholes = Object.values(tripwire.client.wormholes).filter((s) => s.initialID == sigObj.id || s.secondaryID == sigObj.id);
                 if (!wormholes.length) {
                     throw new WhAddError("sig type is wormhole but couldn't find matching wormhole");
@@ -304,11 +315,6 @@ fastmap.addWormholes = function (parsedWhArray) {
                 else {
                     throw new Error("undefined WH type");
                 }
-
-                //Tripwire expects Y-m-d H:i:s in UTC, this wonderful hack gets us that
-                //let lifeLeft = new Date(Date.now() + parsedWh.remainingLifeSeconds * 1000).toISOString().slice(0, 19).replace('T', ' ');
-                let lifeLeft = "+" + parsedWh.remainingLifeSeconds + " seconds";
-                //console.log("lifeLeft: " + lifeLeft);
 
                 let existingSig = null;
                 let existingSig2 = null;
@@ -346,8 +352,14 @@ fastmap.addWormholes = function (parsedWhArray) {
                 else {
                     signature2.systemID = existingSig2.systemID;
                 }
+
+                if (existingWh.life != parsedWh.remainingLife) {
+                    console.log("Changing WH life, adding second payload");
+                    wormholesPayload2.push({"wormhole": wormhole, "signatures": [signature, signature2]});
+                }
             }
             else {
+                console.log("Adding WH for unknown sig");
                 signature = {
                     "id": sigObj.id,
                     "signatureID": fullSig,
@@ -355,17 +367,15 @@ fastmap.addWormholes = function (parsedWhArray) {
                     "type": "wormhole",
                     "name": name,
                     "lifeLength": maxLife,
-                    "lifeLeft": "+" + parsedWh.remainingLifeSeconds + " seconds"
+                    "lifeLeft": lifeLeft
                 };
 
                 signature2 = {
-                    "id": "",
-                    "signatureID": "",
+                    "id": "", //this has to be specified or Tripwire will trip out
                     "systemID": leadsTo,
                     "type": "wormhole",
-                    "name": "",
                     "lifeLength": maxLife,
-                    "lifeLeft": "+" + parsedWh.remainingLifeSeconds + " seconds"
+                    "lifeLeft": lifeLeft
                 };
 
                 let type = null;
@@ -388,7 +398,6 @@ fastmap.addWormholes = function (parsedWhArray) {
                 }
 
                 wormhole = {
-                    "id": "",
                     "type": type,
                     "parent": parent,
                     "life": parsedWh.remainingLife,
@@ -396,6 +405,7 @@ fastmap.addWormholes = function (parsedWhArray) {
                 };
             }
             wormholesPayload.push({"wormhole": wormhole, "signatures": [signature, signature2]});
+            addedSigs[fullSig] = parsedWh;
         } catch (error) {
             errors[i] = error;
         }
@@ -407,11 +417,22 @@ fastmap.addWormholes = function (parsedWhArray) {
         let success = function(data) {
             console.log("Op success!");
         }
+
         let always = function() {
-            console.log("Posted payload.");
+            if (wormholesPayload2.length > 0) {
+                // Without this stupid hack sleep the hole age in the UI sometimes fails to update
+                // and I cba to figure out a cleaner way to solve this
+                setTimeout(() => {
+                    let payload = {"signatures": {"update": wormholesPayload2}};
+                    let success = function(data) {
+                        console.log("Second payload success!");
+                    }
+                    tripwire.refresh('refresh', payload, success, null);
+                }, 500);
+            }
         }
 
-        tripwire.refresh('refresh', payload, success, always);
+        tripwire.refresh('refresh', payload, null, always);
     }
 
     return errors;
@@ -614,11 +635,13 @@ function pasteHandler(e) {
 
     // this looks like multi-line input, check if it's from the bookmark window
     if (/[\r\n]/.test(content)) {
-        const lines = content.split(/\r?\n/).map(line => line.split('\t'));
+        const lines = content.split(/\r?\n/);
+        let uniqueLines = [...new Set(lines)];
+        uniqueLines = uniqueLines.map(line => line.split('\t'));
         
         // We only care if there are any possible WH bookmarks here, which always have the type "Coordinate" (as they are points in space)
         // Also we don't want to see bookmarks in other systems besides the currently active one (for now, at least).
-        const filtered = lines.filter(
+        const filtered = uniqueLines.filter(
             line => line[1] == "Coordinate" && line[3] == viewingSystem
         );
         if (filtered.length == 0) {
