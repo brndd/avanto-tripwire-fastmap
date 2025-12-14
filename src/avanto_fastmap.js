@@ -6,7 +6,7 @@
 // @downloadURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.user.js
 // @updateURL https://raw.githubusercontent.com/brndd/avanto-tripwire-fastmap/refs/heads/master/avanto_fastmap.meta.js
 // @grant       none
-// @version     0.5.3
+// @version     0.5.4
 // @author      burneddi
 // @description Adds a quick input box for adding wormholes to Tripwire using Avanto bookmark syntax.
 // ==/UserScript==
@@ -290,7 +290,6 @@ fastmap.addWormholes = function (parsedWhArray) {
             let signature2 = null;
             //Check if there's a wormhole associated with this signature and use that instead if it exists
             if (sigObj.type == "wormhole") {
-                console.log("Adding WH for wormhole sig");
                 let wormholes = Object.values(tripwire.client.wormholes).filter((s) => s.initialID == sigObj.id || s.secondaryID == sigObj.id);
                 if (!wormholes.length) {
                     throw new WhAddError("sig type is wormhole but couldn't find matching wormhole");
@@ -354,12 +353,10 @@ fastmap.addWormholes = function (parsedWhArray) {
                 }
 
                 if (existingWh.life != parsedWh.remainingLife) {
-                    console.log("Changing WH life, adding second payload");
                     wormholesPayload2.push({"wormhole": wormhole, "signatures": [signature, signature2]});
                 }
             }
             else {
-                console.log("Adding WH for unknown sig");
                 signature = {
                     "id": sigObj.id,
                     "signatureID": fullSig,
